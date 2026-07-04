@@ -1,0 +1,10 @@
+{
+  "name": "atm-office",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ATM 에이전트 팀 아이소메트릭 오피스 시뮬레이션 (Phase 1: 데모 시뮬 + 승인 게이트)",
+  "scripts": {
+    "start": "node server/server.js"
+  }
+}

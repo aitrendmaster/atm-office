@@ -1,0 +1,13 @@
+# 외부 레퍼런스 이미지(라이선스 — 저장소에 포함 금지)
+original-character sample.gif
+Vector isometric office.jpeg
+
+# 생성 중간 산출물·구버전 배경(용량 절감 — 실행엔 office_bg_v4.png만 필요)
+public/assets/raw/
+public/assets/office_bg.png
+public/assets/office_bg_v2.png
+public/assets/office_bg_v3.png
+
+# 임시 파일
+_*.png
+node_modules/

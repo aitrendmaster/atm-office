@@ -1,0 +1,65 @@
+// 파이프라인 스테이지 그래프 — atm-manager.md 실파이프라인 미러.
+// stage.kind: work(에이전트 작업) | gate_approval(CEO 승인, AUTO 통과 가능) | gate_qc(자동 QC, 확률적 fail 연출)
+// agents 배열 = 병렬 그룹. report:true 면 완료 후 매니저에게 이동·보고 연출.
+
+export const PIPELINES = {
+  weekly: {
+    title: '주간 콘텐츠 사이클',
+    stages: [
+      { id: 'kickoff',   kind: 'gate_approval', gate: 'gate_kickoff', label: '작업 시작 승인 (CEO)' },
+      { id: 'research',  kind: 'work', agents: ['caleb', 'matt'], label: '리서치 (병렬)', dur: [5, 9], report: true,
+        detail: { caleb: '주간 AI 트렌드 수집', matt: '경쟁사 발표 추적' } },
+      { id: 'insight',   kind: 'work', agents: ['daniel'], label: '인사이트 Top5', dur: [4, 7], report: true,
+        detail: { daniel: '리서치 종합 → 주제 Top 5' } },
+      { id: 'planning',  kind: 'work', agents: ['joseph'], label: '주간 캘린더', dur: [4, 7], report: true,
+        detail: { joseph: '주간 콘텐츠 캘린더 작성' } },
+      { id: 'plan_ok',   kind: 'gate_approval', gate: 'gate_plan', label: '기획 승인 ① (CEO)' },
+      { id: 'images',    kind: 'work', agents: ['esther', 'ruth'], label: '이미지 선행 제작', dur: [5, 8], report: false,
+        detail: { esther: '카드뉴스 5장 구성·생성', ruth: '썸네일·공유 이미지 + 매니페스트' } },
+      { id: 'produce',   kind: 'work', agents: ['angel', 'joas', 'mark', 'john', 'peter'], label: '채널 제작 (병렬)', dur: [6, 11], report: false,
+        detail: { angel: '유튜브 스크립트', joas: '블로그 SEO 포스트', mark: 'Threads 스레드', john: '뉴스레터', peter: '페이스북 포스트' } },
+      { id: 'design_qc', kind: 'gate_qc', agents: ['iris'], label: '디자인 QC 게이트', dur: [4, 6], failChance: 0.35,
+        failFix: { agents: ['ruth'], dur: [3, 5], detail: '반려 카드 재렌더' },
+        detail: { iris: 'v3 가이드 픽셀 대조 검수' } },
+      { id: 'content_qc', kind: 'gate_qc', agents: ['samuel'], label: '콘텐츠 QC', dur: [4, 6], failChance: 0,
+        detail: { samuel: '브랜드·완성도·사실 검수' } },
+      { id: 'publish_ok', kind: 'gate_approval', gate: 'gate_publish', label: '발행 승인 ② (CEO)' },
+      { id: 'publishing', kind: 'work', agents: ['publisher'], label: '예약 발행', dur: [4, 6], report: true,
+        detail: { publisher: '전 채널 예약 발행 실행' } },
+      { id: 'metrics',   kind: 'work', agents: ['luke'], label: '성과 집계', dur: [4, 6], report: true,
+        detail: { luke: 'KPI 분석 → 다음 주 제안' } },
+      { id: 'feedback',  kind: 'work', agents: ['luke'], label: '피드백 루프 → daniel', dur: [2, 3], report: false,
+        handoff: { from: 'luke', to: 'daniel', text: '성과 인사이트 전달 (피드백 루프)' },
+        detail: { luke: 'daniel에게 성과 인사이트 전달' } },
+    ],
+  },
+  card_rush: {
+    title: '긴급 카드뉴스 1건',
+    stages: [
+      { id: 'kickoff',    kind: 'gate_approval', gate: 'gate_kickoff', label: '작업 시작 승인 (CEO)' },
+      { id: 'card',       kind: 'work', agents: ['esther'], label: '카드 구성·생성', dur: [4, 7], report: false,
+        detail: { esther: '긴급 카드뉴스 5장' } },
+      { id: 'render',     kind: 'work', agents: ['ruth'], label: '렌더·보정', dur: [3, 5], report: false,
+        detail: { ruth: '카드 렌더 + 브랜드 오버레이' } },
+      { id: 'design_qc',  kind: 'gate_qc', agents: ['iris'], label: '디자인 QC 게이트', dur: [3, 5], failChance: 0.5,
+        failFix: { agents: ['ruth'], dur: [2, 4], detail: '반려 카드 재렌더' },
+        detail: { iris: 'v3 대조 검수' } },
+      { id: 'content_qc', kind: 'gate_qc', agents: ['samuel'], label: '콘텐츠 QC', dur: [2, 4], failChance: 0,
+        detail: { samuel: '캡션·사실 검수' } },
+      { id: 'publish_ok', kind: 'gate_approval', gate: 'gate_publish', label: '발행 승인 ② (CEO)' },
+      { id: 'publishing', kind: 'work', agents: ['publisher'], label: '예약 발행', dur: [3, 4], report: true,
+        detail: { publisher: 'IG·Threads 예약 발행' } },
+    ],
+  },
+  metrics_only: {
+    title: '성과 분석만',
+    stages: [
+      { id: 'kickoff',  kind: 'gate_approval', gate: 'gate_kickoff', label: '작업 시작 승인 (CEO)' },
+      { id: 'metrics',  kind: 'work', agents: ['luke'], label: '주간 성과 분석', dur: [5, 8], report: true,
+        detail: { luke: '채널별 KPI 집계·분석' } },
+      { id: 'feedback', kind: 'work', agents: ['luke'], label: '피드백 → daniel', dur: [2, 3], report: false,
+        handoff: { from: 'luke', to: 'daniel', text: '다음 주 전략 인사이트 전달' },
+        detail: { luke: 'daniel에게 인사이트 전달' } },
+    ],
+  },
+};

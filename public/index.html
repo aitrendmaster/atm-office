@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ATM Office — 에이전트 팀 시뮬레이션</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="viewport">
+  <div id="world">
+    <img id="bg" src="/assets/office_bg_v4.png" alt="" draggable="false"
+         onerror="this.classList.add('missing')">
+    <div id="floor"></div><!-- 배경 이미지 없을 때 CSS 폴백 바닥 -->
+    <div id="zones"></div>
+    <div id="props"></div>
+    <div id="entities"></div>
+    <div id="fx"></div>
+  </div>
+</div>
+
+<header id="topbar">
+  <span class="logo">🏢 <b>ATM Office</b> <i>agent team simulation</i></span>
+  <span id="taskStatus" class="task-status">대기 중</span>
+  <span id="connDot" class="conn" title="서버 연결">●</span>
+</header>
+
+<div id="zoomCtl">
+  <button id="zIn" title="확대 (＋)">＋</button>
+  <button id="zOut" title="축소 (－)">－</button>
+  <button id="zFit" title="전체 보기">⛶</button>
+</div>
+
+<aside id="taskConsole" class="panel"></aside>
+<aside id="approvalInbox" class="panel"></aside>
+<aside id="inspector" class="panel hidden"></aside>
+<section id="eventLog" class="panel"></section>
+
+<script type="module" src="/js/main.js"></script>
+</body>
+</html>
