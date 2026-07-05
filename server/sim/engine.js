@@ -6,6 +6,7 @@ const world = {
   auto: false,
   speed: 1,
   task: null,            // { id, title, state, stage, pipelineKey }
+  lastResult: null,      // { taskId, title, ok, summary, artifacts[], log, ts } — 최근 완료 작업 결과(스냅샷 복원)
   agents: Object.fromEntries(AGENT_IDS.map((id) => [id, { state: 'idle', detail: '', taskId: null, at: `desk:${id}` }])),
   pendingApproval: null, // { gateId, taskId, summary, artifacts }
   log: [],               // 최근 이벤트(스냅샷 복원용 축약 로그)
@@ -65,6 +66,9 @@ function apply(ev) {
       break;
     case 'approval_result':
       world.pendingApproval = null;
+      break;
+    case 'task_result':
+      world.lastResult = { taskId: ev.taskId, title: ev.title, ok: ev.ok, summary: ev.summary || '', artifacts: ev.artifacts || [], log: ev.log || '', ts: ev.ts };
       break;
     case 'set_auto':
       world.auto = !!ev.value;

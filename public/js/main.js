@@ -10,6 +10,7 @@ const panels = {
   topbar: ui.topbar(),
   taskConsole: ui.taskConsole(meta.pipelines),
   approvalInbox: ui.approvalInbox(),
+  results: ui.resultsPanel(),
   inspector: ui.inspector(meta.roster, meta.zones),
   eventLog: ui.eventLog(meta.roster),
 };

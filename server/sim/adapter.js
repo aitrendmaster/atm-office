@@ -3,7 +3,7 @@
 import { AGENT_IDS } from './roster.js';
 import * as engine from './engine.js';
 
-const ALLOWED_TYPES = new Set(['agent_state', 'agent_move', 'message', 'artifact', 'gate_qc', 'task_created', 'task_state']);
+const ALLOWED_TYPES = new Set(['agent_state', 'agent_move', 'message', 'artifact', 'gate_qc', 'task_created', 'task_state', 'task_result']);
 const ALLOWED_STATES = new Set(['idle', 'walking', 'working', 'reporting', 'waiting_gate', 'blocked']);
 
 export function ingest(raw) {

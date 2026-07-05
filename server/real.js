@@ -90,6 +90,8 @@ export async function runRealTask(instruction, title) {
     { cwd: PROJECT, windowsHide: true });
 
   const taskAgents = new Map();   // tool_use_id -> agentId (Task 매핑)
+  const artifacts = [];           // Write/Edit 파일 경로 수집 → task_result
+  let resultSummary = '';
   let lastDetailAt = 0;
   let buf = '';
 
@@ -123,7 +125,11 @@ export async function runRealTask(instruction, title) {
           engine.dispatch({ source: 'real', type: 'agent_state', agent: id, state: 'working', taskId, detail: desc });
         } else if (c.name === 'Write' || c.name === 'Edit') {
           const fp = c.input?.file_path;
-          if (fp) engine.dispatch({ source: 'real', type: 'artifact', agent: 'manager', path: fp.replace(PROJECT, '').replace(/^[\\/]/, ''), kind: c.name.toLowerCase() });
+          if (fp) {
+            const rel = fp.replace(PROJECT, '').replace(/^[\\/]/, '');
+            if (!artifacts.includes(rel)) artifacts.push(rel);
+            engine.dispatch({ source: 'real', type: 'artifact', agent: 'manager', path: rel, kind: c.name.toLowerCase() });
+          }
         } else {
           const now = Date.now();               // 도구 스팸 방지: 2초에 1회만 상태 디테일 갱신
           if (now - lastDetailAt > 2000) {
@@ -151,8 +157,9 @@ export async function runRealTask(instruction, title) {
     }
 
     if (ev.type === 'result') {
-      const summary = (ev.result || ev.error || '').toString().replace(/\s+/g, ' ').slice(0, 180);
-      engine.dispatch({ source: 'real', type: 'message', from: 'manager', to: 'yj', kind: 'report', text: `완료 보고: ${summary || '(요약 없음)'}` });
+      resultSummary = (ev.result || ev.error || '').toString().slice(0, 2000);
+      const brief = resultSummary.replace(/\s+/g, ' ').slice(0, 180);
+      engine.dispatch({ source: 'real', type: 'message', from: 'manager', to: 'yj', kind: 'report', text: `완료 보고: ${brief || '(요약 없음)'}` });
     }
   };
 
@@ -167,6 +174,9 @@ export async function runRealTask(instruction, title) {
   child.on('close', (code) => {
     log.end();
     const ok = code === 0;
+    engine.dispatch({ source: 'real', type: 'task_result', taskId, title: taskTitle, ok,
+      summary: resultSummary || (ok ? '(요약 없음)' : `실행 실패 (exit ${code})`),
+      artifacts, log: `logs/${path.basename(logPath)}` });
     engine.dispatch({ source: 'real', type: 'task_state', taskId, state: ok ? 'done' : 'failed', stage: null, note: ok ? '' : `exit ${code}` });
     if (!ok) engine.dispatch({ source: 'real', type: 'message', from: 'manager', to: 'yj', kind: 'report', text: `실행 종료 코드 ${code} — 로그: atm-office/logs/${path.basename(logPath)}` });
     child = null;

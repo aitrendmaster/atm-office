@@ -129,7 +129,16 @@ input[type=range] { flex: 1; }
 .appr-empty { font-size: 12px; color: #8b949e; }
 .badge { display: inline-block; min-width: 18px; text-align: center; background: #ef4444; color: #fff; border-radius: 9px; font-size: 11px; font-weight: 800; padding: 1px 5px; margin-left: 6px; }
 
-#inspector { top: calc(56px + 46vh + 20px); right: 12px; width: 290px; max-height: 34vh; overflow-y: auto; }
+#results { top: calc(56px + 46vh + 20px); right: 12px; width: 290px; max-height: 34vh; overflow-y: auto; }
+#results .res-title { font-size: 13.5px; font-weight: 800; margin-bottom: 6px; }
+#results .res-time { color: #8b949e; font-weight: 600; font-size: 11px; margin-left: 6px; }
+#results .res-summary { font-size: 12px; line-height: 1.55; color: #cbd5e1; background: #0d1117; border: 1px solid #21262d; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; max-height: 130px; overflow-y: auto; word-break: keep-all; }
+#results .res-arts b { display: block; font-size: 11.5px; color: #8b949e; margin-bottom: 4px; }
+#results .res-arts a { display: block; font-size: 11.5px; color: #79c0ff; padding: 3px 6px; border-radius: 6px; text-decoration: none; word-break: break-all; }
+#results .res-arts a:hover { background: #21262d; }
+#results .res-log { display: inline-block; margin-top: 8px; font-size: 11px; color: #8b949e; }
+
+#inspector { top: calc(56px + 46vh + 20px); right: 316px; width: 290px; max-height: 34vh; overflow-y: auto; }
 #inspector .name { font-size: 16px; font-weight: 900; display: flex; align-items: center; gap: 8px; }
 #inspector .name .chip { width: 12px; height: 12px; border-radius: 4px; }
 #inspector .kv { font-size: 12.5px; margin-top: 6px; line-height: 1.5; }

@@ -119,6 +119,27 @@ export function inspector(roster, zones) {
   };
 }
 
+// ── 작업 결과 패널 — 완료된 실제 작업의 요약 전문 + 산출물 파일(클릭=새 탭 열람) ──
+export function resultsPanel() {
+  const el = $('#results');
+  const render = (r) => {
+    if (!r) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    const t = new Date(r.ts || Date.now());
+    el.innerHTML = `
+      <h3>📦 작업 결과 ${r.ok ? '<span style="color:#4ade80">완료</span>' : '<span style="color:#f87171">실패</span>'}
+        <span style="float:right;cursor:pointer" id="resX">✕</span></h3>
+      <div class="res-title">${esc(r.title || r.taskId)} <span class="res-time">${String(t.getMonth() + 1)}/${t.getDate()} ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}</span></div>
+      <div class="res-summary">${esc(r.summary).replace(/\n/g, '<br>')}</div>
+      ${r.artifacts?.length ? `<div class="res-arts"><b>📄 산출물 ${r.artifacts.length}건 (클릭해서 열기)</b>${
+        r.artifacts.map((p) => `<a href="/api/file?path=${encodeURIComponent(p)}" target="_blank">${esc(p)}</a>`).join('')
+      }</div>` : '<div class="res-arts" style="color:#8b949e">파일 산출물 없음</div>'}
+      ${r.log ? `<a class="res-log" href="/api/file?path=${encodeURIComponent('atm-office/' + r.log)}" target="_blank">🧾 전체 실행 로그</a>` : ''}`;
+    $('#resX', el).addEventListener('click', () => el.classList.add('hidden'));
+  };
+  return { show: render };
+}
+
 // ── 보고 피드(바텀업) ──
 export function eventLog(roster) {
   const el = $('#eventLog');

@@ -83,6 +83,22 @@ const server = http.createServer(async (req, res) => {
     catch (e) { return json(res, 400, { ok: false, error: String(e.message) }); }
   }
 
+  // ── 결과물 열람(읽기 전용, 프로젝트 루트 하위만) ──
+  if (url.pathname === '/api/file') {
+    const rel = url.searchParams.get('path') || '';
+    const ROOT = path.resolve(__dirname, '..', '..');            // C:\dev\ATM sns
+    const fp = path.resolve(ROOT, rel);
+    if (!fp.startsWith(ROOT)) return json(res, 403, { ok: false, error: '허용 범위 밖 경로' });
+    fs.readFile(fp, (err, data) => {
+      if (err) return json(res, 404, { ok: false, error: '파일 없음: ' + rel });
+      const ext = path.extname(fp).toLowerCase();
+      const ct = MIME[ext] || (['.md', '.txt', '.log', '.json', '.py', '.js'].includes(ext) ? 'text/plain; charset=utf-8' : 'application/octet-stream');
+      res.writeHead(200, { 'Content-Type': ct });
+      res.end(data);
+    });
+    return;
+  }
+
   // ── 정적 데이터(클라 공용) ──
   if (url.pathname === '/api/meta') {
     return json(res, 200, { roster: ROSTER, zones: ZONES, pipelines: Object.fromEntries(Object.entries(PIPELINES).map(([k, v]) => [k, v.title])) });

@@ -75,6 +75,9 @@ export class Store {
       case 'artifact':
         this.ui.inspector.noteArtifact(ev.agent, ev.path);
         break;
+      case 'task_result':
+        this.ui.results.show(ev);
+        break;
     }
   }
 
@@ -97,6 +100,7 @@ export class Store {
     }
     this.ui.approvalInbox.clear();
     if (w.pendingApproval) this.ui.approvalInbox.push({ ...w.pendingApproval, type: 'approval_request' });
+    if (w.lastResult) this.ui.results.show(w.lastResult);
     if (w.task) {
       const stMap = { queued: ['running', '▶ 대기'], awaiting_approval: ['waiting', '⏳ CEO 승인 대기'], running: ['running', `▶ 진행: ${w.task.stage || ''}`], done: ['done', '✅ 완료'], rejected: ['', '❌ 반려됨'], failed: ['', '⚠️ 실패'] };
       const [cls, txt] = stMap[w.task.state] || ['', '대기 중'];
