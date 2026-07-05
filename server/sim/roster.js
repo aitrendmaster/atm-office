@@ -16,7 +16,7 @@ export const ZONES = {
 
 export const ROSTER = {
   yj: {
-    name: 'YJ (오유진)', file: null, model: 'human', color: '#F59E0B', zone: 'ceo',
+    name: 'YJ', file: null, model: 'human', color: '#F59E0B', zone: 'ceo',
     role: 'CEO — 최종 의사결정·승인', perms: 'CEO', tools: ['최종 승인', '유튜브 직접 업로드'],
     scope: '전 파이프라인 최종 승인(게이트 ①②) · 방향 설정 · 반려 권한',
   },

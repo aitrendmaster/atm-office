@@ -16,6 +16,62 @@ const PORT = 3777;
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.json': 'application/json; charset=utf-8', '.woff2': 'font/woff2' };
 
+// 미니 마크다운 → 읽기용 HTML (의존성 0): 제목/볼드/이탤릭/링크/리스트/표/코드/인용/구분선
+function mdToHtml(src) {
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const inline = (s) => esc(s)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/\*([^*]+)\*/g, '<i>$1</i>')
+    .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+  const lines = src.replace(/\r\n/g, '\n').split('\n');
+  let html = '', inCode = false, inList = false, inTable = false;
+  const closeAll = () => { if (inList) { html += '</ul>'; inList = false; } if (inTable) { html += '</table>'; inTable = false; } };
+  for (const raw of lines) {
+    const l = raw.trimEnd();
+    if (l.startsWith('```')) { closeAll(); html += inCode ? '</pre>' : '<pre>'; inCode = !inCode; continue; }
+    if (inCode) { html += esc(raw) + '\n'; continue; }
+    if (/^\|.*\|$/.test(l)) {
+      if (/^\|[\s:|-]+\|$/.test(l)) continue;                     // 구분행 스킵
+      if (!inTable) { closeAll(); html += '<table>'; inTable = true; }
+      html += '<tr>' + l.slice(1, -1).split('|').map((c) => `<td>${inline(c.trim())}</td>`).join('') + '</tr>';
+      continue;
+    }
+    if (inTable) { html += '</table>'; inTable = false; }
+    const h = l.match(/^(#{1,4})\s+(.*)/);
+    if (h) { closeAll(); html += `<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`; continue; }
+    if (/^(-{3,}|\*{3,})$/.test(l)) { closeAll(); html += '<hr>'; continue; }
+    if (/^>\s?/.test(l)) { closeAll(); html += `<blockquote>${inline(l.replace(/^>\s?/, ''))}</blockquote>`; continue; }
+    const li = l.match(/^\s*(?:[-*]|\d+\.)\s+(.*)/);
+    if (li) { if (!inList) { html += '<ul>'; inList = true; } html += `<li>${inline(li[1])}</li>`; continue; }
+    if (!l.trim()) { closeAll(); continue; }
+    closeAll(); html += `<p>${inline(l)}</p>`;
+  }
+  if (inCode) html += '</pre>';
+  closeAll();
+  return html;
+}
+
+function mdPage(title, src, rel) {
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title}</title><style>
+body{max-width:860px;margin:0 auto;padding:44px 26px 90px;font-family:'Pretendard','Malgun Gothic',sans-serif;background:#fdfcfa;color:#24292f;line-height:1.7;font-size:15.5px}
+h1{font-size:26px;border-bottom:2px solid #e8e2d9;padding-bottom:10px;margin:8px 0 18px}
+h2{font-size:20px;margin:30px 0 10px;padding-left:10px;border-left:4px solid #0691B4}
+h3{font-size:16.5px;margin:22px 0 8px}h4{font-size:15px;margin:18px 0 6px;color:#57606a}
+p{margin:8px 0}ul{margin:8px 0 8px 22px}li{margin:4px 0}
+table{border-collapse:collapse;margin:12px 0;width:100%;font-size:14px}td{border:1px solid #e0d9cf;padding:7px 10px}tr:first-child td{background:#f3efe8;font-weight:700}
+blockquote{margin:10px 0;padding:8px 14px;background:#f3f7f9;border-left:4px solid #67c3d8;border-radius:0 8px 8px 0;color:#3a5560}
+code{background:#f0ece5;padding:1px 6px;border-radius:5px;font-size:13.5px}
+pre{background:#22272e;color:#dbe3ea;padding:14px;border-radius:10px;overflow-x:auto;font-size:13px;line-height:1.5}
+hr{border:none;border-top:1px solid #e8e2d9;margin:22px 0}a{color:#0969da}
+.meta{font-size:12px;color:#8b949e;margin-bottom:14px}.meta a{color:#8b949e}
+</style></head><body>
+<div class="meta">📄 ${rel} · <a href="/api/file?path=${encodeURIComponent(rel)}&raw=1">원문 md</a> · ATM Office 뷰어</div>
+${mdToHtml(src)}
+</body></html>`;
+}
+
 function json(res, code, obj) {
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(obj));
@@ -83,7 +139,7 @@ const server = http.createServer(async (req, res) => {
     catch (e) { return json(res, 400, { ok: false, error: String(e.message) }); }
   }
 
-  // ── 결과물 열람(읽기 전용, 프로젝트 루트 하위만) ──
+  // ── 결과물 열람(읽기 전용, 프로젝트 루트 하위만). .md는 스타일 HTML로 렌더(?raw=1이면 원문) ──
   if (url.pathname === '/api/file') {
     const rel = url.searchParams.get('path') || '';
     const ROOT = path.resolve(__dirname, '..', '..');            // C:\dev\ATM sns
@@ -92,6 +148,10 @@ const server = http.createServer(async (req, res) => {
     fs.readFile(fp, (err, data) => {
       if (err) return json(res, 404, { ok: false, error: '파일 없음: ' + rel });
       const ext = path.extname(fp).toLowerCase();
+      if (ext === '.md' && url.searchParams.get('raw') !== '1') {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        return res.end(mdPage(path.basename(fp), data.toString('utf8'), rel));
+      }
       const ct = MIME[ext] || (['.md', '.txt', '.log', '.json', '.py', '.js'].includes(ext) ? 'text/plain; charset=utf-8' : 'application/octet-stream');
       res.writeHead(200, { 'Content-Type': ct });
       res.end(data);
