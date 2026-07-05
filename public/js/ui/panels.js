@@ -18,6 +18,12 @@ export function taskConsole(pipelines) {
   const el = $('#taskConsole');
   el.innerHTML = `
     <h3>🎯 작업 지시 (탑다운)</h3>
+    <textarea id="tcInstr" rows="3" placeholder="실제 작업 지시를 입력하세요 — 팀이 진짜로 실행합니다&#10;예) 오늘자 AI 트렌드 3개 조사해서 리서치 메모로 저장해줘"></textarea>
+    <div class="row" style="margin-top:6px">
+      <button class="btn primary" id="tcRunReal" style="flex:1;text-align:center">🚀 실제 실행 (팀 가동)</button>
+      <button class="btn" id="tcCancel" style="display:none;background:#7f1d1d;border-color:#7f1d1d">■ 중지</button>
+    </div>
+    <div style="margin:10px 0 6px;font-size:11px;color:#8b949e;font-weight:700;letter-spacing:1px">데모 시나리오</div>
     <input type="text" id="tcTitle" placeholder="작업 제목 (선택)">
     <div class="presets">
       ${Object.entries(pipelines).map(([k, t]) => `<button class="btn" data-pl="${k}">▶ ${esc(t)}</button>`).join('')}
@@ -25,6 +31,14 @@ export function taskConsole(pipelines) {
     <div class="row"><label>AUTO 결재</label><div class="switch" id="tcAuto"></div><span id="tcAutoTxt" style="color:#8b949e;font-size:11px">수동 승인</span></div>
     <div class="row"><label>속도</label><input type="range" id="tcSpeed" min="0.5" max="4" step="0.5" value="1"><b id="tcSpeedV">1x</b></div>`;
   const autoSw = $('#tcAuto', el), autoTxt = $('#tcAutoTxt', el), speed = $('#tcSpeed', el), speedV = $('#tcSpeedV', el);
+  const instr = $('#tcInstr', el), runReal = $('#tcRunReal', el), cancelBtn = $('#tcCancel', el);
+  runReal.addEventListener('click', async () => {
+    const text = instr.value.trim();
+    if (!text) { instr.focus(); return; }
+    const r = await cmd({ cmd: 'start_task', mode: 'real', instruction: text, title: text.slice(0, 30) });
+    if (!r.ok) alert(r.error || '실행 실패');
+  });
+  cancelBtn.addEventListener('click', () => cmd({ cmd: 'cancel_task' }));
   el.querySelectorAll('[data-pl]').forEach((b) => b.addEventListener('click', async () => {
     const r = await cmd({ cmd: 'start_task', pipeline: b.dataset.pl, title: $('#tcTitle', el).value.trim() || undefined });
     if (!r.ok) alert(r.error || '시작 실패');
@@ -32,7 +46,11 @@ export function taskConsole(pipelines) {
   autoSw.addEventListener('click', () => cmd({ cmd: 'set_auto', value: !autoSw.classList.contains('on') }));
   speed.addEventListener('change', () => cmd({ cmd: 'set_speed', value: +speed.value }));
   return {
-    setBusy: (busy) => el.querySelectorAll('[data-pl]').forEach((b) => (b.disabled = busy)),
+    setBusy: (busy) => {
+      el.querySelectorAll('[data-pl]').forEach((b) => (b.disabled = busy));
+      runReal.disabled = busy;
+      cancelBtn.style.display = busy ? '' : 'none';
+    },
     reflectAuto: (v) => { autoSw.classList.toggle('on', v); autoTxt.textContent = v ? 'AUTO — 자동 결재 🖃' : '수동 승인'; },
     reflectSpeed: (v) => { speed.value = v; speedV.textContent = v + 'x'; },
   };

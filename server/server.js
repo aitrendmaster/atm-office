@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import * as engine from './sim/engine.js';
 import { runTask } from './sim/demo.js';
 import { ingest } from './sim/adapter.js';
+import * as real from './real.js';
 import { ROSTER, ZONES } from './sim/roster.js';
 import { PIPELINES } from './sim/pipeline.js';
 
@@ -49,11 +50,19 @@ const server = http.createServer(async (req, res) => {
       const c = await readBody(req);
       switch (c.cmd) {
         case 'start_task': {
-          if (engine.isBusy()) return json(res, 409, { ok: false, error: '이미 진행 중인 태스크가 있습니다' });
+          if (engine.isBusy() || real.isRunning()) return json(res, 409, { ok: false, error: '이미 진행 중인 태스크가 있습니다' });
+          if (c.mode === 'real') {
+            if (!c.instruction || !c.instruction.trim()) return json(res, 400, { ok: false, error: '작업 지시 내용이 비어 있습니다' });
+            real.runRealTask(c.instruction.trim(), c.title).catch((e) =>
+              engine.dispatch({ source: 'real', type: 'task_state', taskId: 'unknown', state: 'failed', note: String(e.message) }));
+            return json(res, 200, { ok: true, mode: 'real' });
+          }
           runTask(c.pipeline || 'weekly', c.title).catch((e) =>
             engine.dispatch({ type: 'task_state', taskId: 'unknown', state: 'failed', note: String(e.message) }));
           return json(res, 200, { ok: true });
         }
+        case 'cancel_task':
+          return json(res, 200, { ok: real.cancel() });
         case 'approve':
           return json(res, 200, { ok: engine.resolveGate(c.gateId, c.decision, c.note) });
         case 'set_auto':

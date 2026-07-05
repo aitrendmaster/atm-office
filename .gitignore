@@ -11,3 +11,4 @@ public/assets/office_bg_v3.png
 # 임시 파일
 _*.png
 node_modules/
+logs/
