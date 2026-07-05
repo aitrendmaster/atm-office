@@ -44,6 +44,8 @@ export function isRunning() { return !!child; }
 
 export function cancel() {
   if (!child) return false;
+  // 트리 킬: 헤드리스 Claude가 스폰한 백그라운드/중첩 프로세스까지 함께 종료(Windows)
+  try { spawn('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true }); } catch { /* fallback */ }
   try { child.kill('SIGTERM'); } catch { /* 이미 종료 */ }
   return true;
 }
@@ -75,7 +77,9 @@ export async function runRealTask(instruction, title) {
     '실행 규칙:',
     '- 작업 성격에 맞으면 .claude/agents 서브에이전트(caleb·matt·daniel·joseph·esther·ruth·angel·joas·mark·john·peter·iris·samuel·publisher·luke)를 Task 도구로 활용해 분업하라.',
     '- 프로젝트 CLAUDE.md 규칙(예약발행·무손상 경로·디자인 QC 게이트)을 준수하라.',
-    '- 완료 시 결과를 3줄 이내로 요약 보고하라.',
+    '- 금지: 백그라운드 태스크 생성, run_*.bat 실행, claude/헤드리스 중첩 실행, 장시간 폴링. 모든 명령은 포그라운드로 짧게.',
+    '- 현황·보고성 질문이면 API 건별 조회 대신 로컬 파일(_published.flag, 캘린더 md, 폴더 목록) 위주로 빠르게 확인하라.',
+    '- 완료 시 결과를 3줄 이내로 요약 보고하라. 총 20분 안에 끝내라(초과 시 중단됨).',
   ].join('\n');
 
   engine.dispatch({ source: 'real', type: 'task_state', taskId, state: 'running', stage: 'executing' });
@@ -88,6 +92,20 @@ export async function runRealTask(instruction, title) {
   const taskAgents = new Map();   // tool_use_id -> agentId (Task 매핑)
   let lastDetailAt = 0;
   let buf = '';
+
+  // 워치독: 출력 5분 무활동 or 총 25분 초과 → 트리 킬 (영원한 '진행 중' 방지)
+  let lastOutputAt = Date.now();
+  const startedAt = Date.now();
+  const watchdog = setInterval(() => {
+    if (!child) { clearInterval(watchdog); return; }
+    const idle = Date.now() - lastOutputAt, total = Date.now() - startedAt;
+    if (idle > 5 * 60_000 || total > 25 * 60_000) {
+      const why = idle > 5 * 60_000 ? '5분간 무응답' : '총 25분 초과';
+      engine.dispatch({ source: 'real', type: 'message', from: 'manager', to: 'yj', kind: 'report', text: `⏱ 워치독 중단: ${why} — 로그: atm-office/logs/${path.basename(logPath)}` });
+      cancel();
+      clearInterval(watchdog);
+    }
+  }, 15_000);
 
   const onLine = (line) => {
     log.write(line + '\n');
@@ -139,6 +157,7 @@ export async function runRealTask(instruction, title) {
   };
 
   child.stdout.on('data', (d) => {
+    lastOutputAt = Date.now();
     buf += d.toString('utf8');
     let i;
     while ((i = buf.indexOf('\n')) >= 0) { const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1); if (line) onLine(line); }
