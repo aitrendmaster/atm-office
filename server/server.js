@@ -13,6 +13,9 @@ import { PIPELINES } from './sim/pipeline.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUB = path.join(__dirname, '..', 'public');
 const PORT = 3777;
+// 루프백 전용 바인딩. /api/file(루트 하위 임의 파일 열람)·/api/cmd(claude.exe 실행)를
+// 노출하므로 절대 0.0.0.0/외부·LAN·터널에 열지 말 것. 원격 접근이 필요하면 인증을 먼저 붙인다.
+const HOST = '127.0.0.1';
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.json': 'application/json; charset=utf-8', '.woff2': 'font/woff2' };
 
@@ -174,4 +177,4 @@ const server = http.createServer(async (req, res) => {
   });
 });
 
-server.listen(PORT, () => console.log(`✅ ATM Office → http://localhost:${PORT}`));
+server.listen(PORT, HOST, () => console.log(`✅ ATM Office → http://localhost:${PORT} (${HOST} 전용)`));
